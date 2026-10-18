@@ -79,15 +79,23 @@ I designed ReceiptFlow AI around open-source AI and local runtime primitives:
 
 ### 2. Backend Service (FastAPI + Pydantic v2)
 - Built with **Python 3.11** and **FastAPI**, bound strictly to loopback (`127.0.0.1`).
-- **Defensive Extraction:** Strips Markdown fences (` ```json `), isolates the JSON body with regex, and validates data through Pydantic models with defensive defaults.
+- **Defensive Extraction:** Strips markdown code fences (like triple-backtick JSON wrappers), isolates the JSON body with regex, and validates data through Pydantic models with defensive defaults.
 - **Stateless by Design:** The backend never saves files to disk or writes to a database. It processes files strictly in-memory and returns structured JSON immediately.
 
 ```python
-# In backend/app/main.py
+# backend/app/main.py
 @app.post("/api/receipts/parse", response_model=ReceiptResult)
 async def parse_receipt(file: UploadFile = File(...)):
-    # Validates mime types, reads bytes into memory, sends to local Ollama
-    # Never persists files to cloud or disk
+    name = (file.filename or "receipt").lower()
+    ext = os.path.splitext(name)[1]
+    if ext not in ALLOWED:
+        raise HTTPException(status_code=415, detail="Unsupported file type.")
+    
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="The uploaded file is empty.")
+
+    # Extracts in-memory, queries local Ollama, returns validated JSON
 ```
 
 ### 3. Frontend Dashboard (React + TypeScript + Tailwind CSS)
