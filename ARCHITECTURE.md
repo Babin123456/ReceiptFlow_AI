@@ -1,6 +1,7 @@
 # ReceiptFlow AI — Architecture
 
 ## Goals and boundaries
+
 ReceiptFlow AI favors local processing, transparent data flow, and human review. It is not an accounting system, tax adviser, or guarantee of correct extraction. Model output is untrusted until reviewed.
 
 ## High-level flow
@@ -23,6 +24,7 @@ flowchart TD
 ```
 
 ## Privacy guarantees and assumptions
+
 - The frontend is designed to call a loopback API (`127.0.0.1`) and has no cloud storage integration.
 - The backend uses Ollama's local HTTP endpoint; it does not call a hosted LLM provider.
 - IndexedDB stores expense metadata in the current browser profile. Browser storage is not a substitute for full-disk encryption.
@@ -50,6 +52,7 @@ App
 ```
 
 ### Frontend responsibilities
+
 - Validate extensions and file size before upload.
 - Display queue states and API/model errors.
 - Call FastAPI with `FormData`; never send documents to analytics.
@@ -59,6 +62,7 @@ App
 - Support delete and edit operations locally.
 
 ## FastAPI-to-Ollama pipeline
+
 1. **Input validation:** extension and byte-size checks; the API only accepts PDF and common raster images.
 2. **Extraction:** PDFs use PyMuPDF to extract embedded text. Images use base64 data with the configured local vision model.
 3. **Prompting:** ask the model to return a single JSON object with vendor, date, currency, subtotal, tax, total, category, and line items.
@@ -67,17 +71,20 @@ App
 6. **Persistence:** the backend does not persist receipt records. The browser stores metadata only after the user receives and reviews the result.
 
 ## API
+
 - `GET /api/health` — reports API and local Ollama reachability/model configuration.
 - `POST /api/receipts/parse` — multipart upload; returns structured fields.
 - `GET /` — API welcome message.
 
 ## Failure behavior
+
 - If Ollama is offline, the endpoint returns a clear 503 error.
 - If PDF text is empty, the API explains that scanned PDFs need OCR; it does not silently claim success.
 - If model output is malformed, the API returns a 502 parsing error.
 - If the model omits fields, safe defaults are returned, and the user can edit them.
 
 ## Threat model / production hardening
+
 - Bind only to loopback.
 - Keep CORS origins narrow.
 - Add request rate/size limits and content sniffing if the app is later used by multiple local users.
